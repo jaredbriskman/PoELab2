@@ -10,5 +10,7 @@ void setup() {
 }
 
 void loop() {
-Serial.println(analogRead(sensorPin));
+  Serial.print(analogRead(sensorPin));
+  Serial.write('\n');
+  delay(500);
 }
