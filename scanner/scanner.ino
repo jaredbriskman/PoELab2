@@ -30,13 +30,11 @@ void loop() {
   Serial.print(phi);
   Serial.print('x');
   Serial.println(map(analogRead(sensorPin), 440, 190, 25, 60));
-
-  theta += thetaMult;
-  
-  panServo.write(theta);
-  tiltServo.write(phi);
-
   if (isMoving) {
+    theta += thetaMult;
+    
+    panServo.write(theta);
+    tiltServo.write(phi);
     if (theta == 55 || theta == 145) {
       thetaMult = -thetaMult;
       phi += phiMult;

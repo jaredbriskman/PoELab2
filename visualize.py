@@ -8,6 +8,8 @@ import matplotlib as mpl
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.mplot3d import Axes3D
+import pandas as pd
+import csv
 
 cxn = Serial('/dev/ttyACM0', baudrate=9600)
 # while(True):
@@ -19,8 +21,13 @@ cxn = Serial('/dev/ttyACM0', baudrate=9600)
 def get_euler(cxn):
     serial_val = cxn.readline()
     if len(serial_val) >= 8:
-        serial_str = serial_val[:-2].decode("utf-8")
-        return serial_str.split('x')
+        try:
+            serial_str = serial_val[:-2].decode("utf-8")
+        except:
+            pass
+        str_split = serial_str.split('x')
+        if '' not in str_split:
+            return str_split
 
 
 def rotz(theta): # Generates a z-axis rotation matrix for a given angle
@@ -56,25 +63,6 @@ def point_transform(theta, phi, dist):
     return point_transform+origin_point
 
 
-# Constructs test list of points
-theta_vals = np.linspace(-pi/2, pi/2, 10)
-phi_vals = np.zeros(10)
-len_vals = np.ones(10)
-point_vals = transform_points(theta_vals, phi_vals, len_vals)
-points_deconstruct = zip(*point_vals)
-
-# pyplot setup
-mpl.rcParams['toolbar'] = 'None'
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.set_axis_off()
-# ax.set_xlim([-1, 1])
-# ax.set_ylim([-1, 1])
-# ax.set_zlim([-1, 1])
-plt.ion()
-autumn = plt.get_cmap('autumn')
-cNorm = colors.Normalize(vmin=0, vmax=1)
-scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=autumn)
 
 # Plot points
 
@@ -88,17 +76,44 @@ scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=autumn)
 # fig = plt.figure()
 # ax = fig.add_subplot(111, projection='3d')
 # plt.ion()
-all_points = []
+
+# all_points = []
+# while(len(all_points) < 60*90):
+#     if cxn.inWaiting:
+#         euler = get_euler(cxn)
+#         if euler:
+#             if '$' in ''.join(euler):
+#                 break
+#             all_points.append(euler)
+            # point_cart = point_transform(*euler)
+            # color_val = scalarMap.to_rgba(point_cart[1])
+
+# print(all_points)
+# df = pd.DataFrame(list(all_points), columns=list('xyz'))
+# print(df)
+# df.to_csv('points.txt')
+
+# Constructs test list of points
+with open('points.txt', 'r') as points_file:
+    points_reader = csv.reader(points_file)
+    list_points = list(points_reader)[1:]
+    points_clean = [point[1:] for point in list_points]
+
+points_split = zip(*points_clean)
+point_vals = transform_points(*points_split)
+points_deconstruct = zip(*point_vals)
+
+# pyplot setup
+mpl.rcParams['toolbar'] = 'None'
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.set_axis_off()
+ax.scatter(*points_deconstruct)
 plt.show()
-while(len(all_points)<60*90):
-    if cxn.inWaiting:
-        euler = get_euler(cxn)
-        if euler:
-            if '$' in euler:
-                break
-            point_cart = point_transform(*euler)
-            all_points.append(point_cart)
-            color_val = scalarMap.to_rgba(point_cart[1])
-ax.scatter(zip(*all_points))
-plt.show()
-            # plt.pause(0.001)
+# # ax.set_xlim([-1, 1])
+# # ax.set_ylim([-1, 1])
+# # ax.set_zlim([-1, 1])
+# plt.ion()
+# autumn = plt.get_cmap('autumn')
+# cNorm = colors.Normalize(vmin=0, vmax=1)
+# scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=autumn)
