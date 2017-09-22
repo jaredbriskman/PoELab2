@@ -9,7 +9,7 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.mplot3d import Axes3D
 
-# cxn = Serial('/dev/ttyACM0', baudrate=9600)
+cxn = Serial('/dev/ttyACM0', baudrate=9600)
 # while(True):
 #     serial_val = cxn.readline()
 #     serial_str = serial_val[:-2].decode("utf-8")
@@ -18,8 +18,9 @@ from mpl_toolkits.mplot3d import Axes3D
 
 def get_euler(cxn):
     serial_val = cxn.readline()
-    serial_str = serial_val[:-2].decode("utf-8")
-    return serial_str.split('x')
+    if len(serial_val) >= 8:
+        serial_str = serial_val[:-2].decode("utf-8")
+        return serial_str.split('x')
 
 
 def rotz(theta): # Generates a z-axis rotation matrix for a given angle
@@ -48,7 +49,7 @@ def transform_points(thetas, phis, lens):
 
 
 def point_transform(theta, phi, dist):
-    point_euler = [theta, phi, dist]
+    point_euler = [int(theta)*(pi/180), int(phi)*(pi/180), int(dist)/100]
     origin_point = get_origin(*point_euler[:-1]) # account for movement of the origin of the sensor
     orig_vec = [0, point_euler[2], 0] # The original vector
     point_transform = np.dot(roty(point_euler[1]), np.dot(rotz(point_euler[0]), orig_vec))
@@ -67,29 +68,37 @@ mpl.rcParams['toolbar'] = 'None'
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.set_axis_off()
-ax.set_xlim([-2, 2])
-ax.set_ylim([-2, 2])
-ax.set_zlim([-2, 2])
+# ax.set_xlim([-1, 1])
+# ax.set_ylim([-1, 1])
+# ax.set_zlim([-1, 1])
 plt.ion()
 autumn = plt.get_cmap('autumn')
-cNorm = colors.Normalize(vmin=0, vmax=max(list(points_deconstruct)[1]))
+cNorm = colors.Normalize(vmin=0, vmax=1)
 scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=autumn)
 
 # Plot points
 
-for point in point_vals:
-    color_val = scalarMap.to_rgba(point[1])
-    ax.scatter(*point, color=color_val)
-    plt.show()
-    plt.pause(0.05)
-plt.show(block=True)
+# for point in point_vals:
+#     color_val = scalarMap.to_rgba(point[1])
+#     ax.scatter(*point, color=color_val)
+#     plt.show()
+#     plt.pause(0.05)
+# plt.show(block=True)
 # cxn = Serial('/dev/ttyACM0', baudrate=9600)
 # fig = plt.figure()
 # ax = fig.add_subplot(111, projection='3d')
 # plt.ion()
-# while(True):
-#     euler = get_euler(cxn)
-#     point_cart = point_transform(*euler)
-#     ax.scatter(point_cart)
-#     plt.show()
-#     plt.pause(.05)
+all_points = []
+plt.show()
+while(len(all_points)<60*90):
+    if cxn.inWaiting:
+        euler = get_euler(cxn)
+        if euler:
+            if '$' in euler:
+                break
+            point_cart = point_transform(*euler)
+            all_points.append(point_cart)
+            color_val = scalarMap.to_rgba(point_cart[1])
+ax.scatter(zip(*all_points))
+plt.show()
+            # plt.pause(0.001)
