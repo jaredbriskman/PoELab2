@@ -1,5 +1,13 @@
-25cm - 440
-60cm - 190
+Calibration:
+25cm - 440 mv
+60cm - 190 mv
+
+Test:
+20cm - 500 mv 
+30cm - 400 mv
+40cm - 300 mv
+50cm - 240 mv
+70cm - 160 mv
 
 
 
