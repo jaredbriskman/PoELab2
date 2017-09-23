@@ -19,7 +19,7 @@ Servo panServo;
 Servo tiltServo;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(38400);
   panServo.attach(panServoPin);
   tiltServo.attach(tiltServoPin);
 }

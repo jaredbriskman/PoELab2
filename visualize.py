@@ -11,7 +11,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 import csv
 
-cxn = Serial('/dev/ttyACM0', baudrate=9600)
+cxn = Serial('/dev/ttyACM0', baudrate=38400)
 # while(True):
 #     serial_val = cxn.readline()
 #     serial_str = serial_val[:-2].decode("utf-8")
