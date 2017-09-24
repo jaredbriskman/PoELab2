@@ -1,3 +1,7 @@
+"""
+PoE Lab 2 Visualization Code
+Jared Briskman and Matt Brucker
+"""
 #!/usr/local/bin/python
 
 from serial import Serial
@@ -5,19 +9,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import pi, cos, sin
 import matplotlib as mpl
-import matplotlib.colors as colors
-import matplotlib.cm as cmx
 from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 import csv
 
-cxn = Serial('/dev/ttyACM0', baudrate=38400)
-# while(True):
-#     serial_val = cxn.readline()
-#     serial_str = serial_val[:-2].decode("utf-8")
-#     split_str = serial_str.split('x')
+cxn = Serial('/dev/ttyACM0', baudrate=9600)
 
 
+# Reads a point in spherical form via serial data.
 def get_euler(cxn):
     serial_val = cxn.readline()
     if len(serial_val) >= 8:
@@ -30,23 +29,19 @@ def get_euler(cxn):
             return str_split
 
 
-def rotz(theta): # Generates a z-axis rotation matrix for a given angle
+def rotz(theta):  # Generates a z-axis rotation matrix for a given angle
     return [[cos(theta), -sin(theta), 0],
             [sin(theta), cos(theta), 0],
             [0, 0, 1]]
 
 
-def roty(phi): # Generates a y-axis rotation matrix for a given angle
+def roty(phi):  # Generates a y-axis rotation matrix for a given angle
     return [[1, 0, 0],
             [0, cos(phi), sin(phi)],
             [0, -sin(phi), cos(phi)]]
 
 
-def get_origin(theta, phi):
-    origin_init = [0, 0, 0] # Leaving this as 0 since the current pan/tilt design has no offset
-    return np.dot(roty(phi), np.dot(rotz(theta), origin_init))
-
-
+# Transforms a list of points from spherical coordinates to Cartesian
 def transform_points(thetas, phis, lens):
     points = []
     points_euler = list(zip(thetas, phis, lens))
@@ -56,64 +51,50 @@ def transform_points(thetas, phis, lens):
 
 
 def point_transform(theta, phi, dist):
-    point_euler = [int(theta)*(pi/180), int(phi)*(pi/180), int(dist)/100]
-    origin_point = get_origin(*point_euler[:-1]) # account for movement of the origin of the sensor
-    orig_vec = [0, point_euler[2], 0] # The original vector
+    point_euler = [(int(theta)-100)*(pi/180), -(int(phi)-90)*(pi/180), int(dist)/100]
+    orig_vec = [0, point_euler[2], 0]  # The original vector to transform
     point_transform = np.dot(roty(point_euler[1]), np.dot(rotz(point_euler[0]), orig_vec))
-    return point_transform+origin_point
+    return point_transform
 
 
+def points_to_csv(file_name='points.txt'):
+    all_points = []
+    while(len(all_points) < 60*90):  # While we've received less than the maximum number of points
+        if cxn.inWaiting:  # Wait to receive new serial data
+            euler = get_euler(cxn)
+            if euler:  # If we get valid serial data:
+                if '$' in ''.join(euler):  # Stop if we reach the end
+                    break
+                all_points.append(euler)
+    df = pd.DataFrame(list(all_points), columns=list('xyz'))
+    df.to_csv(file_name)
+    return all_points
 
-# Plot points
 
-# for point in point_vals:
-#     color_val = scalarMap.to_rgba(point[1])
-#     ax.scatter(*point, color=color_val)
-#     plt.show()
-#     plt.pause(0.05)
-# plt.show(block=True)
-# cxn = Serial('/dev/ttyACM0', baudrate=9600)
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# plt.ion()
+# Sets up pyplot and returns the figure
+def get_pyplot():
+    mpl.rcParams['toolbar'] = 'None'
+    plt.rcParams['image.cmap'] = 'gist_stern'
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_axis_off()
+    return ax
 
-# all_points = []
-# while(len(all_points) < 60*90):
-#     if cxn.inWaiting:
-#         euler = get_euler(cxn)
-#         if euler:
-#             if '$' in ''.join(euler):
-#                 break
-#             all_points.append(euler)
-            # point_cart = point_transform(*euler)
-            # color_val = scalarMap.to_rgba(point_cart[1])
 
-# print(all_points)
-# df = pd.DataFrame(list(all_points), columns=list('xyz'))
-# print(df)
-# df.to_csv('points.txt')
-
-# Constructs test list of points
+points_to_csv()
+# Open the list of points and format them correctly
 with open('points.txt', 'r') as points_file:
     points_reader = csv.reader(points_file)
     list_points = list(points_reader)[1:]
     points_clean = [point[1:] for point in list_points]
 
+# Converts the list of points from spherical to Cartesian coordinates
 points_split = zip(*points_clean)
 point_vals = transform_points(*points_split)
 points_deconstruct = zip(*point_vals)
+points_deconstruct2 = zip(*point_vals) # Needs a copy for the color map to work
 
-# pyplot setup
-mpl.rcParams['toolbar'] = 'None'
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.set_axis_off()
-ax.scatter(*points_deconstruct)
+# Plots the points and generates the heatmap
+ax = get_pyplot()
+ax.scatter(*points_deconstruct, c=list(points_deconstruct2)[1])
 plt.show()
-# # ax.set_xlim([-1, 1])
-# # ax.set_ylim([-1, 1])
-# # ax.set_zlim([-1, 1])
-# plt.ion()
-# autumn = plt.get_cmap('autumn')
-# cNorm = colors.Normalize(vmin=0, vmax=1)
-# scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=autumn)
